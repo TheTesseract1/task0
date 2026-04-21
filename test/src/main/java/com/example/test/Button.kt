@@ -1,18 +1,18 @@
 package com.example.test
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
-import androidx.compose.material3.AlertDialogDefaults.shape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -22,10 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -38,7 +38,8 @@ enum class ButtonStyle(
     Primary(Accent, Accent, false), //фон, рамки нет так что тот же цвет, можно нажать
     Inactive(AccentInactive, AccentInactive, true), //фон, рамки нет, нельзя нажать
     Secondary(White, Accent, false), //фон, рамка, можно нажать
-    Tetriary(InputBg, InputBg, false)  //фон, нет рамки, можно нажать
+    Tetriary(InputBg, InputBg, false),  //фон, нет рамки, можно нажать
+    LoginWidth(White, InputStoke, false)
 }
 
 //цвет в зависимости
@@ -50,6 +51,7 @@ fun textColor(
         ButtonStyle.Inactive -> White
         ButtonStyle.Secondary -> Accent
         ButtonStyle.Tetriary -> Black
+        ButtonStyle.LoginWidth -> Black
         else -> White
     }
 }
@@ -162,7 +164,7 @@ fun CardButton(
     modifier: Modifier = Modifier,
     buttonStyle: ButtonStyle,
     onClick: () -> Unit,
-    text: String) {
+    prise: String) {
     BaseButton(
         modifier
             .height(56.dp)
@@ -180,12 +182,57 @@ fun CardButton(
                verticalAlignment = Alignment.CenterVertically
            ) {
                Icon(
-                   painter = painterResource(R.drawable.)
+                   painter = painterResource(R.drawable.icon_shopping_cart),
+                   tint = White,
+                   contentDescription = null
+               )
+               Spacer(Modifier.width(16.dp))
+               Text(
+                   text = "В корзину",
+                   fontWeight = FontWeight.W600,
+                   fontSize = 17.sp,
 
                )
            }
+           Text(
+               text = "$prise ₽",
+               fontWeight = FontWeight.W600,
+               fontSize = 17.sp,
+
+           )
        }
 
+    }
+}
+
+@Composable
+fun LoginWithButton(
+    modifier: Modifier = Modifier,
+    buttonStyle: ButtonStyle,
+    onClick: () -> Unit,
+    text: String,
+    icon: Painter
+) {
+    BaseButton(
+        modifier.width(335.dp).height(60.dp),
+        buttonStyle,
+        onClick,
+        padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Image(
+            painter = icon,
+            contentDescription = null,
+            modifier = Modifier.size(32.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = text,
+            color = Black,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.W500,
+            lineHeight = 24.sp,
+            letterSpacing = 0.sp
+        )
     }
 }
 
@@ -194,6 +241,14 @@ fun CardButton(
 private fun ButtonPrev() {
     Column(Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(13.dp),) {
-
+        CardButton(buttonStyle = ButtonStyle.Primary,
+            onClick = {},
+            prise = "500")
+        LoginWithButton(
+            buttonStyle = ButtonStyle.LoginWidth,
+            onClick = {},
+            icon = painterResource(R.drawable.vkh4_logo) ,
+            text = "Войти с VK"
+        )
     }
 }
