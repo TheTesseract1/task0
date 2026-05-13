@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "task"
 include(":app")
 include(":test")
+include(":mylibrary")
