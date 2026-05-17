@@ -23,3 +23,4 @@ rootProject.name = "task"
 include(":app")
 include(":test")
 include(":mylibrary")
+include(":mylibrary2")

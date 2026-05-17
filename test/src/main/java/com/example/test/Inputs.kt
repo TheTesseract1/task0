@@ -1,5 +1,6 @@
 package com.example.test
 
+import android.R.attr.onClick
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,44 +34,50 @@ import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun InputBase(
-    modifier: Modifier = Modifier,
-    value: String,
-    onValueChange: (String) -> Unit,
-    text: String,
-    textPlaceHolder: String,
-    errorMessage: String,
-    isPassword: Boolean = false,
-    leadingIcon: @Composable (()-> Unit)? = null,
-    trailingIcon: @Composable (()-> Unit)? = null,
-    needIcon: @Composable (()-> Unit)? = null,
-    enabled: Boolean = true
+    modifier: Modifier = Modifier, //позволяет настраивать размеры и отступы снаружи
+    value: String,                  //текст введенный в поле
+    onValueChange: (String) -> Unit, //функция, срабатывающая при наборе текста
+    text: String,                   //заголовок над полем (Label)
+    textPlaceHolder: String,        //подсказка внутри пустого поля
+    errorMessage: String,           //текст ошибки
+    isPassword: Boolean = false,        //флаг: является ли поле паролем
+    leadingIcon: @Composable (()-> Unit)? = null,  //иконка в начале поля (внутри)
+    trailingIcon: @Composable (()-> Unit)? = null,  //иконка в конце поля (внутри)
+    needIcon: @Composable (()-> Unit)? = null,   //иконка снаружи поля (справа)
+    enabled: Boolean = true             //активно ли поле для ввода
     ) {
+    //запомнит, нажат ли глазик
     var isClicked by remember { mutableStateOf(false) }
+    //запоминает, находится ли сейчас курсор в этом поле
     var isFocused by remember { mutableStateOf(false) }
 
-    if (text.isEmpty()){
+    //рисуем текст когда он есть
+    if (text.isNotEmpty()){
         Text(
             text = text,
             fontWeight = FontWeight.W400,
             fontSize = 14.sp,
             color = Description
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(4.dp)) //отступ под заголовком
     }
     Row(
+        //выравнивает поле и внешнюю иконку по центру
         verticalAlignment = Alignment.CenterVertically
     ) {
+        //****ПОЛЕ ВВОДА
         TextField(
             modifier = modifier.onFocusChanged{
-                isFocused = it.isFocused
+                isFocused = it.isFocused //обновляем состояние фокуса
             }.fillMaxWidth(
-                if(needIcon != null) 0.8f else 1f
+                if(needIcon != null) 0.8f else 1f  //если справа есть внешняя иконка, поле займет 80% ширины
             ).border(
                 width = 1.dp,
-                color = if (errorMessage.isNotEmpty()) Error
-                else if (isFocused) Accent
-                else if (value.isNotEmpty() && enabled) IconsColor
-                else InputStoke,
+                //**логика цвета рамки
+                color = if (errorMessage.isNotEmpty()) Error  //если есть ошибка - красная
+                else if (isFocused) Accent                      //если в фокусе - синяя
+                else if (value.isNotEmpty() && enabled) IconsColor  //если заполнен - серый
+                else InputStoke,                                //иначе стандартный
                 shape = RoundedCornerShape(10.dp)
             ),
             value = value,
@@ -79,6 +86,7 @@ fun InputBase(
             textStyle = TextStyle(
                 fontSize = 16.sp
             ),
+            //***подсказка
             placeholder = {
                 Column {
                     Text(
@@ -90,38 +98,47 @@ fun InputBase(
                 }
             },
             shape = RoundedCornerShape(10.dp),
+            //***цвета поля
             colors = TextFieldDefaults.colors(
+                //если ошибка - делаем фон бледно-красным, иначе белый
                 focusedContainerColor = if (errorMessage.isNotEmpty()) Color(0x1AFD3535) else InputBg,
                 unfocusedContainerColor = if (errorMessage.isNotEmpty()) Color(0x1AFD3535) else InputBg,
+                //убираем стандартную полоску внизу, так как мы рисуем свою рамку через .border()
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,
                 disabledContainerColor = if (errorMessage.isNotEmpty()) Color(0x1AFD3535) else InputBg,
                 disabledTextColor = Black,
-                cursorColor = Accent
+                cursorColor = Accent //цвет мигающий палочки
             ),
             leadingIcon = leadingIcon,
             trailingIcon = {
-                trailingIcon?.let { it() }
-                if (isPassword){
-//                    IconButton(onClick = (onClick{} isClicked = !isClicked)){
-//                        Icon(
-//                            contentDescription = null,
-//                            modifier = Modifier.size(20.dp),
-//                            painter = if (!isClicked) painterResource(R.drawable.group_1)
-//                            else painterResource(R.drawable.eye_off_an_inner_journey___iconsvg_co)
-//                        )
-//                    }
+                trailingIcon?.let { it() } //рисуем иконку, если она передана
+                if (isPassword){ //если это пароль, добавляем кнопку глазка
+                    IconButton(onClick = { isClicked = !isClicked}){
+                        Icon(
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            //меняем картинку глазка в зависимости от состояния isClicked
+                            painter = if (!isClicked) painterResource(R.drawable.group_1)
+                            else painterResource(R.drawable.eye_off_an_inner_journey___iconsvg_co)
+                        )
+                    }
                 }
             },
-            visualTransformation = if (isPassword && !isClicked) PasswordVisualTransformation('*') else VisualTransformation.None,
+            // если пароль и "глаз" не нажат — рисуем точки вместо букв, иначе — обычный текст
+            visualTransformation = if (isPassword && !isClicked)
+                PasswordVisualTransformation('*')
+            else VisualTransformation.None,
         )
+        //если передали needIcon, рисуем её в той же строке (Row)
         needIcon?.let{
             needIcon()
         }
     }
+    //блок ошибки под полем
     if (errorMessage.isNotEmpty()){
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp)) //отступ перед полем ошибки
         Text(
             text = errorMessage,
             color = Error,
