@@ -1,0 +1,516 @@
+package com.example.task.presentation.screens
+
+import android.content.Context
+import android.content.Context.MODE_PRIVATE
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
+import androidx.navigation.NavController
+import coil3.compose.rememberAsyncImagePainter
+import com.example.task.data.CartModel
+import com.example.task.data.NewsModel
+import com.example.task.data.ProductDetailsModel
+import com.example.task.data.ProductModel
+import com.example.task.domain.NetworkRepository
+import com.example.task.domain.Sort.filter
+import com.example.task.domain.Sort.filterCategory
+import com.example.test.BigButton
+import com.example.test.ButtonStyle
+import com.example.test.ChipsButton as Chips
+import com.example.test.BaseModal
+import com.example.test.Black
+import com.example.test.Caption
+import com.example.test.PrimaryCard
+import com.example.test.R
+import com.example.test.SearchDefault
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+@Composable
+fun HomeScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    var categoryChoose by remember { mutableStateOf("Популярное") }
+    var searchVal by remember { mutableStateOf("") }
+    val cards = remember { mutableStateListOf<ProductModel>() }
+    var filteredCards = remember { mutableStateListOf<ProductModel>() }
+    var news = remember { mutableStateListOf<NewsModel>() }
+    var token by remember { mutableStateOf("") }
+    var cardsInCard = remember { mutableStateListOf<CartModel>() }
+
+    var errorMessage by remember { mutableStateOf("") }
+
+    var isNotToken by remember { mutableStateOf(false) }
+
+    if (errorMessage.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = {errorMessage = ""},
+            title ={
+                Text(text = errorMessage)
+            },
+            confirmButton ={}
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        val allFetchedCards = NetworkRepository.getProducts()
+        cards.clear()
+        cards.addAll(allFetchedCards)
+        filteredCards.clear()
+        filteredCards.addAll(allFetchedCards)
+        news.addAll(NetworkRepository.getNews() ?: emptyList())
+        val notT = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
+            "notToken",
+            null
+        )
+        isNotToken = notT == "true"
+
+        if (!isNotToken) {
+            token = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
+                "token",
+                null
+            )!!
+            val actuallyCardsInCard = NetworkRepository.getCard(token)
+            if (actuallyCardsInCard != null) {
+                cardsInCard.clear()
+                cardsInCard.addAll(actuallyCardsInCard)
+            }
+        } else {
+            var tempCards = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
+                "cards",
+                null
+            )
+            if (tempCards == null) return@LaunchedEffect
+            var gson = Gson()
+            var tempCardsList = gson.fromJson<List<CartModel>>(tempCards, object : TypeToken<List<CartModel>>() {}.type)
+            if (tempCardsList != null) {
+                cardsInCard.clear()
+                cardsInCard.addAll(tempCardsList)
+            }
+        }
+    }
+
+    LaunchedEffect(categoryChoose) {
+        val allFetchedCards = filterCategory(categoryChoose,cards)
+        if (categoryChoose != "Популярное"){
+            filteredCards.clear()
+            filteredCards.addAll(allFetchedCards) } else {
+            // хардкод категории для красивого возвращения обратно, т.к. не реализовано
+            filteredCards.clear()
+            filteredCards.addAll(cards)
+        }
+    }
+
+    LazyColumn(
+        modifier.padding(horizontal = 20.dp)
+    ) {
+        item {
+            Spacer(Modifier.height(4.dp))
+            SearchDefault(
+                value = searchVal,
+                onValueChange = {
+                    searchVal = it
+                    filteredCards.clear()
+                    filteredCards.addAll(filter(searchVal, cards))
+                }
+            )
+            Spacer(Modifier.height(32.dp))
+            Text(
+                text = "Акции и новости",
+                fontWeight = FontWeight.W600,
+                fontSize = 17.sp,
+                color = Caption
+            )
+            Spacer(Modifier.height(16.dp))
+            LazyRow {
+                items(
+                    news
+                ) {
+                    Image(
+                        painter = rememberAsyncImagePainter("https://matstart.ru/${it.collectionName}/${it.fileName}"),
+                        contentDescription = null,
+                        modifier = Modifier.size(width = 270.dp, height = 152.dp)
+                    )
+                    Spacer(Modifier.width(16.dp))
+                }
+            }
+            Spacer(Modifier.height(32.dp))
+            Text(
+                text = "Каталог описаний",
+                color = Caption,
+                fontWeight = FontWeight.W600,
+                fontSize = 17.sp
+            )
+            Spacer(Modifier.height(16.dp))
+            LazyRow {
+                item {
+                    for (i in listOf("Популярное", "Женщинам", "Мужчинам", "Детям", "Аксессуары")) {
+                        Chips(
+                            buttonStyle = if (i == categoryChoose) ButtonStyle.Primary else ButtonStyle.Tetriary,
+                            onClick = {
+                                categoryChoose = i
+                            },
+                            text = i
+                        )
+                        Spacer(Modifier.width(16.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(25.dp))
+        }
+        items(
+            items = filteredCards,
+            key = { card -> card.id }
+        ) { card ->
+            val isInCard = cardsInCard.any { cartItem -> cartItem.product.id == card.id }
+            var isOpenModal by remember { mutableStateOf(false) }
+            var description by remember { mutableStateOf<ProductDetailsModel?>(null) }
+
+            PrimaryCard(
+                name = card.name,
+                price = card.price.toString(),
+                category = card.category,
+                isInCard = isInCard,
+                onClickButton = {
+                    scope.launch {
+                        if (!isNotToken) {
+                            val isSuccess = if (isInCard) {
+                                cardsInCard.filter { it.product.id == card.id }
+                                    .all { cartItem ->
+                                        NetworkRepository.deleteCardById(cartItem.id, token)
+                                    }
+                            } else {
+                                NetworkRepository.addCardById(card.id, token)
+                            }
+                            if (isSuccess) {
+                                val updatedCart = NetworkRepository.getCard(token)
+                                if (updatedCart != null) {
+                                    cardsInCard.clear()
+                                    cardsInCard.addAll(updatedCart)
+                                } else {
+                                    errorMessage = "Не удалось обновить корзину + $updatedCart"
+                                }
+                            } else {
+                                errorMessage = "Не удалось выполнить операцию"
+                            }
+                        } else {
+                            val isSuccess = if (isInCard) {
+                                cardsInCard.filter { it.product.id == card.id }
+                                    .all { cartItem ->
+                                        try {
+                                            var tempCards = context.getSharedPreferences(
+                                                "newUsers",
+                                                MODE_PRIVATE
+                                            ).getString(
+                                                "cards",
+                                                null
+                                            )
+                                            var gson = Gson()
+                                            var tempCardsList = gson.fromJson<List<CartModel>>(
+                                                tempCards,
+                                                object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
+
+                                            var tempCardsListMutable = mutableListOf<CartModel>()
+                                            tempCardsListMutable.addAll(tempCardsList)
+
+                                            tempCardsListMutable.remove(cartItem)
+
+                                            var trueTempCards = tempCardsListMutable.toList()
+                                            var gsonTrueTempCards = gson.toJson(trueTempCards)
+                                            context.getSharedPreferences("newUsers",MODE_PRIVATE).edit{
+                                                putString("cards",gsonTrueTempCards)
+                                            }
+                                            true
+                                        } catch (e: Exception) {
+                                            errorMessage = e.toString()
+                                            false
+                                        }
+                                    }
+                            } else {
+                                try {
+                                    var tempCards = context.getSharedPreferences(
+                                        "newUsers",
+                                        MODE_PRIVATE
+                                    ).getString(
+                                        "cards",
+                                        null
+                                    )
+                                    var gson = Gson()
+                                    var tempCardsList = gson.fromJson<List<CartModel>>(
+                                        tempCards,
+                                        object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
+
+                                    var tempCardsListMutable = mutableListOf<CartModel>()
+                                    tempCardsListMutable.addAll(tempCardsList)
+
+                                    var products = NetworkRepository.getProducts()
+
+                                    products.forEach {
+                                        if (it.id == card.id) {
+                                            val lastCardId = tempCardsListMutable.lastOrNull()?.id ?: 0
+                                            val newCartId = lastCardId + 1
+                                            val some = CartModel(newCartId, it, 1)
+                                            tempCardsListMutable.add(some)
+                                        }
+                                    }
+
+                                    var trueTempCards = tempCardsListMutable.toList()
+                                    var gsonTrueTempCards = gson.toJson(trueTempCards)
+                                    context.getSharedPreferences("newUsers",Context.MODE_PRIVATE).edit{
+                                        putString("cards",gsonTrueTempCards)
+                                    }
+                                    true
+                                } catch (e: Exception) {
+                                    errorMessage = e.toString()
+                                    false
+                                }
+                            }
+                            if (isSuccess) {
+                                var tempCards = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
+                                    "cards",
+                                    null
+                                )
+                                var gson = Gson()
+                                var tempCardsList = gson.fromJson<List<CartModel>>(tempCards, object : TypeToken<List<CartModel>>() {}.type)
+
+                                val updatedCart = tempCardsList
+                                if (updatedCart != null) {
+                                    cardsInCard.clear()
+                                    cardsInCard.addAll(updatedCart)
+                                } else {
+                                    errorMessage = "Не удалось обновить корзину + $updatedCart"
+                                }
+                            } else {
+                                errorMessage = "Не удалось выполнить операцию"
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier.clickable {
+                    isOpenModal = true
+                }
+            )
+            if (isOpenModal) {
+
+                LaunchedEffect(Unit) {
+                    delay(1000L)
+                    description = NetworkRepository.getProductDescriptionById(card.id)
+                }
+
+                BaseModal(
+                    onDismissRequest = {
+                        isOpenModal = false
+                        description = null
+                    }
+                ) {
+                    Row {
+                        Text(
+                            text = card.name,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.W600,
+                            color = Black,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(48.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.icon_close),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                                .clickable {
+                                    isOpenModal = false
+                                },
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
+
+                    if (description == null) {
+                        CircularProgressIndicator()
+                    }else {
+                        Text(
+                            text = "Описание",
+                            color = Caption,
+                            fontWeight = FontWeight.W500,
+                            fontSize = 16.sp
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = description!!.description,
+                            color = Black,
+                            fontWeight = FontWeight.W400,
+                            fontSize = 15.sp
+                        )
+                        Spacer(Modifier.height(89.dp))
+                        Text(
+                            text = "Примерный расход:",
+                            color = Caption,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.W400
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = description!!.weight,
+                            color = Black,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.W500
+                        )
+                        Spacer(Modifier.height(19.dp))
+                        BigButton(
+                            buttonStyle = if (isInCard) ButtonStyle.Secondary else ButtonStyle.Primary,
+                            text = if (isInCard) "Убрать" else "Добавить за " + card.price + " ₽",
+                            onClick = {
+                                scope.launch {
+                                    if (!isNotToken) {
+                                        val isSuccess = if (isInCard) {
+                                            cardsInCard.filter { it.product.id == card.id }
+                                                .all { cartItem ->
+                                                    NetworkRepository.deleteCardById(cartItem.id, token)
+                                                }
+                                        } else {
+                                            NetworkRepository.addCardById(card.id, token)
+                                        }
+                                        if (isSuccess) {
+                                            val updatedCart = NetworkRepository.getCard(token)
+                                            if (updatedCart != null) {
+                                                cardsInCard.clear()
+                                                cardsInCard.addAll(updatedCart)
+                                            } else {
+                                                errorMessage = "Не удалось обновить корзину + $updatedCart"
+                                            }
+                                        } else {
+                                            errorMessage = "Не удалось выполнить операцию"
+                                        }
+                                    } else {
+                                        val isSuccess = if (isInCard) {
+                                            cardsInCard.filter { it.product.id == card.id }
+                                                .all { cartItem ->
+                                                    try {
+                                                        var tempCards = context.getSharedPreferences(
+                                                            "newUsers",
+                                                            MODE_PRIVATE
+                                                        ).getString(
+                                                            "cards",
+                                                            null
+                                                        )
+                                                        var gson = Gson()
+                                                        var tempCardsList = gson.fromJson<List<CartModel>>(
+                                                            tempCards,
+                                                            object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
+
+                                                        var tempCardsListMutable = mutableListOf<CartModel>()
+                                                        tempCardsListMutable.addAll(tempCardsList)
+
+                                                        tempCardsListMutable.remove(cartItem)
+
+                                                        var trueTempCards = tempCardsListMutable.toList()
+                                                        var gsonTrueTempCards = gson.toJson(trueTempCards)
+                                                        context.getSharedPreferences("newUsers",MODE_PRIVATE).edit{
+                                                            putString("cards",gsonTrueTempCards)
+                                                        }
+                                                        true
+                                                    } catch (e: Exception) {
+                                                        errorMessage = e.toString()
+                                                        false
+                                                    }
+                                                }
+                                        } else {
+                                            try {
+                                                var tempCards = context.getSharedPreferences(
+                                                    "newUsers",
+                                                    MODE_PRIVATE
+                                                ).getString(
+                                                    "cards",
+                                                    null
+                                                )
+                                                var gson = Gson()
+                                                var tempCardsList = gson.fromJson<List<CartModel>>(
+                                                    tempCards,
+                                                    object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
+
+                                                var tempCardsListMutable = mutableListOf<CartModel>()
+                                                tempCardsListMutable.addAll(tempCardsList)
+
+                                                var products = NetworkRepository.getProducts()
+
+                                                products.forEach {
+                                                    if (it.id == card.id) {
+                                                        val lastCardId = tempCardsListMutable.lastOrNull()?.id ?: 0
+                                                        val newCartId = lastCardId + 1
+                                                        val some = CartModel(newCartId, it, 1)
+                                                        tempCardsListMutable.add(some)
+                                                    }
+                                                }
+
+                                                var trueTempCards = tempCardsListMutable.toList()
+                                                var gsonTrueTempCards = gson.toJson(trueTempCards)
+                                                context.getSharedPreferences("newUsers",MODE_PRIVATE).edit{
+                                                    putString("cards",gsonTrueTempCards)
+                                                }
+                                                true
+                                            } catch (e: Exception) {
+                                                errorMessage = e.toString()
+                                                false
+                                            }
+                                        }
+                                        if (isSuccess) {
+                                            var tempCards = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
+                                                "cards",
+                                                null
+                                            )
+                                            var gson = Gson()
+                                            var tempCardsList = gson.fromJson<List<CartModel>>(tempCards, object : TypeToken<List<CartModel>>() {}.type)
+
+                                            val updatedCart = tempCardsList
+                                            if (updatedCart != null) {
+                                                cardsInCard.clear()
+                                                cardsInCard.addAll(updatedCart)
+                                            } else {
+                                                errorMessage = "Не удалось обновить корзину + $updatedCart"
+                                            }
+                                        } else {
+                                            errorMessage = "Не удалось выполнить операцию"
+                                        }
+                                    }
+                                }
+                                isOpenModal = false
+                            }
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}

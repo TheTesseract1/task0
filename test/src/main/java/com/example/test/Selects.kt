@@ -2,7 +2,6 @@ package com.example.test
 
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -71,31 +70,4 @@ fun DefaultSelect(
         leadingIcon = leadingIcon,
         text = text
     )
-}
-
-@Preview
-@Composable
-private fun Prev() {
-    var valueSelect by remember { mutableStateOf("") }
-    Column {
-        DefaultSelect(
-            value = valueSelect,
-            onValueChange = {valueSelect = it},
-            data = listOf("12q3","12","dasdasda"),
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null
-                )
-            },
-            needIcon = {
-                Spacer(Modifier.width(21.dp))
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null
-                )
-            },
-            text = "1231231231231231"
-        )
-    }
 }

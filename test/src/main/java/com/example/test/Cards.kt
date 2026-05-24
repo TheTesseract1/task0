@@ -148,7 +148,7 @@ fun MainCart(
                         contentDescription = null,
                         modifier = Modifier
                             .size(20.dp)
-                            .clickable { onAdd },
+                            .clickable { onAdd() },
                         tint = Caption
                     )
                 }

@@ -1,5 +1,8 @@
 package com.example.task
 
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -9,6 +12,15 @@ import com.example.test.BigButton
 import com.example.test.ButtonStyle
 import com.example.test.InputBase
 import com.example.test.MainCart
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MyTestScreen()
+        }
+    }
+}
 
 @Composable
 fun MyTestScreen() {
