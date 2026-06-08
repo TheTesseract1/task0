@@ -99,7 +99,8 @@ fun BigButton(
              .width(335.dp),
          buttonStyle,
          onClick,
-         padding = PaddingValues(horizontal = 115.dp)
+         padding = PaddingValues(horizontal = 115.dp),
+         enabled = !buttonStyle.isDisabled
      ) {
          Text(
              color = textColor,
@@ -123,7 +124,8 @@ fun SmallButton(
             .height(40.dp),
         buttonStyle,
         onClick,
-        padding = PaddingValues(vertical = 10.dp, horizontal = 24.dp)
+        padding = PaddingValues(vertical = 10.dp, horizontal = 24.dp),
+        enabled = !buttonStyle.isDisabled
     ){
         Text(
             color = textColor,
@@ -148,7 +150,8 @@ fun ChipsButton(
             .height(48.dp),
         buttonStyle,
         onClick,
-        padding = PaddingValues(vertical = 14.dp, horizontal = 20.dp)
+        padding = PaddingValues(vertical = 14.dp, horizontal = 20.dp),
+        enabled = !buttonStyle.isDisabled
     ) {
         Text(
             text = text,
@@ -171,7 +174,8 @@ fun CardButton(
             .width(335.dp),
         buttonStyle,
         onClick,
-        padding = PaddingValues(vertical = 16.dp, horizontal = 16.dp)
+        padding = PaddingValues(vertical = 16.dp, horizontal = 16.dp),
+        enabled = !buttonStyle.isDisabled
     ) {
        Row(
            modifier = Modifier.fillMaxSize(),
@@ -217,7 +221,8 @@ fun LoginWithButton(
         modifier.width(335.dp).height(60.dp),
         buttonStyle,
         onClick,
-        padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+        padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+        enabled = !buttonStyle.isDisabled
     ) {
         Image(
             painter = icon,

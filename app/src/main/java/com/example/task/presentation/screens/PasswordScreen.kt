@@ -183,11 +183,11 @@ fun PasswordScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                CircleNum("0", isInvisible = true, onClick = {
+                CircleNum("0", isInvisible = true, onClick = {})
+                Spacer(Modifier.width(24.dp))
+                CircleNum("0", onClick = {
                     code = addText(code = code, text = "0")
                 })
-                Spacer(Modifier.width(24.dp))
-                CircleNum("0", onClick = {})
                 Spacer(Modifier.width(24.dp))
                 Box(
                     modifier = Modifier.size(80.dp),

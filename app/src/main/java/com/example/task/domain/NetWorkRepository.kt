@@ -20,20 +20,30 @@ import okhttp3.RequestBody.Companion.toRequestBody
 object NetworkRepository {
 
     suspend fun reg(body: RegisterModel): Boolean {
-        val response = network.reg(body)
-        return response.isSuccessful
+        return try {
+            val response = network.reg(body)
+            response.isSuccessful
+        } catch (e: Exception) {
+            false
+        }
     }
 
     suspend fun login(body: AuthModel): AuthResponseModel? {
-        try {
+        return try {
             val response = network.login(body)
-            return if (response.isSuccessful) response.body() else null
-        } catch (e: Exception) {return null}
+            if (response.isSuccessful) response.body() else null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     suspend fun userInfoAdd(body: UpdateProfileModel): Boolean {
-        val response = network.userInfoAdd(body)
-        return response.isSuccessful
+        return try {
+            val response = network.userInfoAdd(body)
+            response.isSuccessful
+        } catch (e: Exception) {
+            false
+        }
     }
 
     suspend fun userTokensGet(token: String): List<UserTokenModel>? {
@@ -135,10 +145,12 @@ object NetworkRepository {
     }
 
     suspend fun getProducts(): List<ProductModel> {
-        try {
+        return try {
             val response = network.getProducts()
-            return if (response.isSuccessful && response.body() !== null) response.body()!! else emptyList()
-        } catch (e: Exception) {return emptyList()}
+            if (response.isSuccessful && (response.body() != null)) response.body()!! else emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     suspend fun getProductDescriptionById(id: Int): ProductDetailsModel? {

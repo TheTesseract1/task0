@@ -1,6 +1,5 @@
 package com.example.task.presentation.screens
 
-import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -44,7 +43,6 @@ import com.example.task.data.CartModel
 import com.example.task.data.ProductDetailsModel
 import com.example.task.data.ProductModel
 import com.example.task.domain.NetworkRepository
-import com.example.test.R
 import com.example.task.domain.Sort.filter
 import com.example.task.domain.Sort.filterCategory
 import com.example.test.BigButton
@@ -55,6 +53,7 @@ import com.example.test.BaseModal
 import com.example.test.Black
 import com.example.test.Caption
 import com.example.test.PrimaryCard
+import com.example.test.R
 import com.example.test.SearchDefault
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -64,7 +63,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CatalogScreen(
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -72,36 +71,34 @@ fun CatalogScreen(
     var firstLaunch by remember { mutableStateOf(false) }
     var categoryChoose by remember { mutableStateOf("Популярное") }
     var searchVal by remember { mutableStateOf("") }
-    val correctCards = remember { mutableStateListOf<ProductModel>() }
-    var cardsInCard = remember { mutableStateListOf<CartModel>() }
+    val cardsInCard = remember { mutableStateListOf<CartModel>() }
     var token by remember { mutableStateOf("") }
 
-    var cards = remember { mutableStateListOf<ProductModel>() }
-    var filteredCards = remember { mutableStateListOf<ProductModel>() }
+    val cards = remember { mutableStateListOf<ProductModel>() }
+    val filteredCards = remember { mutableStateListOf<ProductModel>() }
+    var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
     var isNotToken by remember { mutableStateOf(false) }
 
     if (errorMessage.isNotEmpty()) {
         AlertDialog(
-            onDismissRequest = {errorMessage = ""},
-            title ={
+            onDismissRequest = { errorMessage = "" },
+            title = {
                 Text(text = errorMessage)
             },
-            confirmButton ={}
+            confirmButton = {}
         )
     }
 
     LaunchedEffect(Unit) {
+        isLoading = true
         val notT = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
             "notToken",
             null
         )
         isNotToken = notT == "true"
 
-        if (correctCards.isNotEmpty()) {
-            correctCards.removeAt(correctCards.lastIndex)
-        }
         val allFetchedCards = NetworkRepository.getProducts()
         cards.clear()
         cards.addAll(allFetchedCards)
@@ -113,33 +110,37 @@ fun CatalogScreen(
             token = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
                 "token",
                 null
-            )!!
-            val actuallyCardsInCard = NetworkRepository.getCard(token)
-            if (actuallyCardsInCard != null) {
-                cardsInCard.addAll(actuallyCardsInCard)
+            ) ?: ""
+            if (token.isNotEmpty()) {
+                val actuallyCardsInCard = NetworkRepository.getCard(token)
+                if (actuallyCardsInCard != null) {
+                    cardsInCard.clear()
+                    cardsInCard.addAll(actuallyCardsInCard)
+                }
             }
         } else {
-            var tempCards = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
+            val tempCards = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
                 "cards",
                 null
             )
-            if (tempCards == null) return@LaunchedEffect
-            var gson = Gson()
-            var tempCardsList = gson.fromJson<List<CartModel>>(tempCards, object : TypeToken<List<CartModel>>() {}.type)
-
-            if (tempCardsList != null) {
-                cardsInCard.clear()
-                cardsInCard.addAll(tempCardsList)
+            if (tempCards != null) {
+                val gson = Gson()
+                val tempCardsList = gson.fromJson<List<CartModel>>(tempCards, object : TypeToken<List<CartModel>>() {}.type)
+                if (tempCardsList != null) {
+                    cardsInCard.clear()
+                    cardsInCard.addAll(tempCardsList)
+                }
             }
         }
+        isLoading = false
     }
 
     LaunchedEffect(categoryChoose) {
-        val allFetchedCards = filterCategory(categoryChoose,cards)
-        if (categoryChoose != "Популярное"){
+        val allFetchedCards = filterCategory(categoryChoose, cards)
+        if (categoryChoose != "Популярное") {
             filteredCards.clear()
-            filteredCards.addAll(allFetchedCards) } else {
-            // хардкод категории для красивого возвращения обратно, т.к. не реализовано
+            filteredCards.addAll(allFetchedCards)
+        } else {
             filteredCards.clear()
             filteredCards.addAll(cards)
         }
@@ -148,6 +149,10 @@ fun CatalogScreen(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        }
+
         LazyColumn(
             modifier.padding(horizontal = 20.dp)
         ) {
@@ -163,7 +168,6 @@ fun CatalogScreen(
                     needIcon = {
                         Spacer(Modifier.width(38.dp))
                         Icon(
-
                             imageVector = Icons.Default.Person,
                             contentDescription = null,
                             modifier = Modifier.size(32.dp)
@@ -216,101 +220,35 @@ fun CatalogScreen(
                                     if (updatedCart != null) {
                                         cardsInCard.clear()
                                         cardsInCard.addAll(updatedCart)
-                                    } else {
-                                        errorMessage = "Не удалось обновить корзину + $updatedCart"
                                     }
                                 } else {
                                     errorMessage = "Не удалось выполнить операцию"
                                 }
                             } else {
-                                val isSuccess = if (isInCard) {
-                                    cardsInCard.filter { it.product.id == card.id }
-                                        .all { cartItem ->
-                                            try {
-                                                var tempCards = context.getSharedPreferences(
-                                                    "newUsers",
-                                                    MODE_PRIVATE
-                                                ).getString(
-                                                    "cards",
-                                                    null
-                                                )
-                                                var gson = Gson()
-                                                var tempCardsList = gson.fromJson<List<CartModel>>(
-                                                    tempCards,
-                                                    object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
+                                try {
+                                    val sharedPrefs = context.getSharedPreferences("newUsers", MODE_PRIVATE)
+                                    val tempCards = sharedPrefs.getString("cards", null)
+                                    val gson = Gson()
+                                    val tempCardsList = gson.fromJson<List<CartModel>>(
+                                        tempCards,
+                                        object : TypeToken<List<CartModel>>() {}.type
+                                    ) ?: listOf()
 
-                                                var tempCardsListMutable = mutableListOf<CartModel>()
-                                                tempCardsListMutable.addAll(tempCardsList)
+                                    val tempCardsListMutable = tempCardsList.toMutableList()
 
-                                                tempCardsListMutable.remove(cartItem)
-
-                                                var trueTempCards = tempCardsListMutable.toList()
-                                                var gsonTrueTempCards = gson.toJson(trueTempCards)
-                                                context.getSharedPreferences("newUsers", MODE_PRIVATE).edit {
-                                                    putString("cards", gsonTrueTempCards)
-                                                }
-                                                true
-                                            } catch (e: Exception) {
-                                                errorMessage = e.toString()
-                                                false
-                                            }
-                                        }
-                                } else {
-                                    try {
-                                        var tempCards = context.getSharedPreferences(
-                                            "newUsers",
-                                            MODE_PRIVATE
-                                        ).getString(
-                                            "cards",
-                                            null
-                                        )
-                                        var gson = Gson()
-                                        var tempCardsList = gson.fromJson<List<CartModel>>(
-                                            tempCards,
-                                            object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
-
-                                        var tempCardsListMutable = mutableListOf<CartModel>()
-                                        tempCardsListMutable.addAll(tempCardsList)
-
-                                        var products = NetworkRepository.getProducts()
-
-                                        products.forEach {
-                                            if (it.id == card.id) {
-                                                val lastCardId = tempCardsListMutable.lastOrNull()?.id ?: 0
-                                                val newCartId = lastCardId + 1
-                                                val some = CartModel(newCartId, it, 1)
-                                                tempCardsListMutable.add(some)
-                                            }
-                                        }
-
-                                        var trueTempCards = tempCardsListMutable.toList()
-                                        var gsonTrueTempCards = gson.toJson(trueTempCards)
-                                        context.getSharedPreferences("newUsers",Context.MODE_PRIVATE).edit{
-                                            putString("cards",gsonTrueTempCards)
-                                        }
-                                        true
-                                    } catch (e: Exception) {
-                                        errorMessage = e.toString()
-                                        false
-                                    }
-                                }
-                                if (isSuccess) {
-                                    var tempCards = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
-                                        "cards",
-                                        null
-                                    )
-                                    var gson = Gson()
-                                    var tempCardsList = gson.fromJson<List<CartModel>>(tempCards, object : TypeToken<List<CartModel>>() {}.type)
-
-                                    val updatedCart = tempCardsList
-                                    if (updatedCart != null) {
-                                        cardsInCard.clear()
-                                        cardsInCard.addAll(updatedCart)
+                                    if (isInCard) {
+                                        tempCardsListMutable.removeAll { it.product.id == card.id }
                                     } else {
-                                        errorMessage = "Не удалось обновить корзину + $updatedCart"
+                                        val lastCardId = tempCardsListMutable.lastOrNull()?.id ?: 0
+                                        tempCardsListMutable.add(CartModel(lastCardId + 1, card, 1))
                                     }
-                                } else {
-                                    errorMessage = "Не удалось выполнить операцию"
+
+                                    sharedPrefs.edit { putString("cards", gson.toJson(tempCardsListMutable)) }
+
+                                    cardsInCard.clear()
+                                    cardsInCard.addAll(tempCardsListMutable)
+                                } catch (e: Exception) {
+                                    errorMessage = e.toString()
                                 }
                             }
                         }
@@ -342,7 +280,7 @@ fun CatalogScreen(
                             )
                             Spacer(Modifier.width(48.dp))
                             Icon(
-                                painter = painterResource(com.example.test.R.drawable.icon_close),
+                                painter = painterResource(R.drawable.icon_close),
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp)
                                     .clickable {
@@ -354,7 +292,7 @@ fun CatalogScreen(
 
                         if (description == null) {
                             CircularProgressIndicator()
-                        }else {
+                        } else {
                             Text(
                                 text = "Описание",
                                 color = Caption,
@@ -402,101 +340,33 @@ fun CatalogScreen(
                                                 if (updatedCart != null) {
                                                     cardsInCard.clear()
                                                     cardsInCard.addAll(updatedCart)
-                                                } else {
-                                                    errorMessage = "Не удалось обновить корзину + $updatedCart"
                                                 }
-                                            } else {
-                                                errorMessage = "Не удалось выполнить операцию"
                                             }
                                         } else {
-                                            val isSuccess = if (isInCard) {
-                                                cardsInCard.filter { it.product.id == card.id }
-                                                    .all { cartItem ->
-                                                        try {
-                                                            var tempCards = context.getSharedPreferences(
-                                                                "newUsers",
-                                                                MODE_PRIVATE
-                                                            ).getString(
-                                                                "cards",
-                                                                null
-                                                            )
-                                                            var gson = Gson()
-                                                            var tempCardsList = gson.fromJson<List<CartModel>>(
-                                                                tempCards,
-                                                                object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
+                                            try {
+                                                val sharedPrefs = context.getSharedPreferences("newUsers", MODE_PRIVATE)
+                                                val tempCards = sharedPrefs.getString("cards", null)
+                                                val gson = Gson()
+                                                val tempCardsList = gson.fromJson<List<CartModel>>(
+                                                    tempCards,
+                                                    object : TypeToken<List<CartModel>>() {}.type
+                                                ) ?: listOf()
 
-                                                            var tempCardsListMutable = mutableListOf<CartModel>()
-                                                            tempCardsListMutable.addAll(tempCardsList)
+                                                val tempCardsListMutable = tempCardsList.toMutableList()
 
-                                                            tempCardsListMutable.remove(cartItem)
-
-                                                            var trueTempCards = tempCardsListMutable.toList()
-                                                            var gsonTrueTempCards = gson.toJson(trueTempCards)
-                                                            context.getSharedPreferences("newUsers", MODE_PRIVATE).edit {
-                                                                putString("cards", gsonTrueTempCards)
-                                                            }
-                                                            true
-                                                        } catch (e: Exception) {
-                                                            errorMessage = e.toString()
-                                                            false
-                                                        }
-                                                    }
-                                            } else {
-                                                try {
-                                                    var tempCards = context.getSharedPreferences(
-                                                        "newUsers",
-                                                        MODE_PRIVATE
-                                                    ).getString(
-                                                        "cards",
-                                                        null
-                                                    )
-                                                    var gson = Gson()
-                                                    var tempCardsList = gson.fromJson<List<CartModel>>(
-                                                        tempCards,
-                                                        object : TypeToken<List<CartModel>>() {}.type) ?: listOf<CartModel>()
-
-                                                    var tempCardsListMutable = mutableListOf<CartModel>()
-                                                    tempCardsListMutable.addAll(tempCardsList)
-
-                                                    var products = NetworkRepository.getProducts()
-
-                                                    products.forEach {
-                                                        if (it.id == card.id) {
-                                                            val lastCardId = tempCardsListMutable.lastOrNull()?.id ?: 0
-                                                            val newCartId = lastCardId + 1
-                                                            val some = CartModel(newCartId, it, 1)
-                                                            tempCardsListMutable.add(some)
-                                                        }
-                                                    }
-
-                                                    var trueTempCards = tempCardsListMutable.toList()
-                                                    var gsonTrueTempCards = gson.toJson(trueTempCards)
-                                                    context.getSharedPreferences("newUsers", MODE_PRIVATE).edit {
-                                                        putString("cards",gsonTrueTempCards)
-                                                    }
-                                                    true
-                                                } catch (e: Exception) {
-                                                    errorMessage = e.toString()
-                                                    false
-                                                }
-                                            }
-                                            if (isSuccess) {
-                                                var tempCards = context.getSharedPreferences("newUsers", MODE_PRIVATE).getString(
-                                                    "cards",
-                                                    null
-                                                )
-                                                var gson = Gson()
-                                                var tempCardsList = gson.fromJson<List<CartModel>>(tempCards, object : TypeToken<List<CartModel>>() {}.type)
-
-                                                val updatedCart = tempCardsList
-                                                if (updatedCart != null) {
-                                                    cardsInCard.clear()
-                                                    cardsInCard.addAll(updatedCart)
+                                                if (isInCard) {
+                                                    tempCardsListMutable.removeAll { it.product.id == card.id }
                                                 } else {
-                                                    errorMessage = "Не удалось обновить корзину + $updatedCart"
+                                                    val lastCardId = tempCardsListMutable.lastOrNull()?.id ?: 0
+                                                    tempCardsListMutable.add(CartModel(lastCardId + 1, card, 1))
                                                 }
-                                            } else {
-                                                errorMessage = "Не удалось выполнить операцию"
+
+                                                sharedPrefs.edit { putString("cards", gson.toJson(tempCardsListMutable)) }
+
+                                                cardsInCard.clear()
+                                                cardsInCard.addAll(tempCardsListMutable)
+                                            } catch (e: Exception) {
+                                                errorMessage = e.toString()
                                             }
                                         }
                                     }
@@ -514,8 +384,8 @@ fun CatalogScreen(
 
             LaunchedEffect(cardsInCard.toList()) {
                 var sum = 0
-                for (card in cardsInCard) {
-                    sum += card.product.price * card.quantity
+                for (cardItem in cardsInCard) {
+                    sum += cardItem.product.price * cardItem.quantity
                 }
                 totalPrice = sum
             }

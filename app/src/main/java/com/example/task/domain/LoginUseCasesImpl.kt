@@ -1,6 +1,7 @@
 package com.example.task.domain
 
 import android.content.Context
+import androidx.core.content.edit
 import com.example.task.data.AuthModel
 
 class LoginUseCasesImpl : LoginUseCases {
@@ -17,7 +18,9 @@ class LoginUseCasesImpl : LoginUseCases {
         try {
             val response = NetworkRepository.login(AuthModel(email, password))
             if (response != null) {
-                // Тут можно сохранить токен в LocalData или SharedPreferences
+                context.getSharedPreferences("newUsers", Context.MODE_PRIVATE).edit {
+                    putString("token", response.token)
+                }
                 onSuccess()
             } else {
                 onFailed("Неверный логин или пароль")
